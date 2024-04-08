@@ -172,13 +172,10 @@ gareData <- gareData %>%
   select(libelle, commune, x_wgs84, y_wgs84) %>% 
   rename("lng" = x_wgs84, "lat"=y_wgs84)
 
-# on remarque un problème de type car les lat et lng sont en chr alors qu'elles devraient être en num
-
-
 # On obtient les coordonnées de la gare
 LilleData <- gareData %>% 
   filter(libelle == GARE_NAME)
-coordsLilleFlandres <- c(LilleData$lat[1],LilleData$lng[1])
+coordsLilleFlandres <- c(as.numeric(LilleData$lat[1]),as.numeric(LilleData$lng[1]))
 
 ```
 
@@ -189,14 +186,14 @@ getStationCoordinates <- function(gare, verbose = TRUE){
   data <- gareData %>% 
     filter(libelle == gare)
   
-  coordinates <- c(data$lat[1],data$lng[1])
+  coordinates <- c(as.numeric(data$lat[1]),as.numeric(data$lng[1]))
   # Si verbose est TRUE, on affiche les coordonnées
   if (verbose){
     cat(gare, " -> (", coordinates[1],", ",coordinates[2], ")\n", sep = "")
   }
   return(coordinates)
 }
-getCityCoordinates("Toulouse-Matabiau")
+getStationCoordinates("Toulouse-Matabiau")
 ```
 
 ## 3.Obtention du temps de transport entre 2 villes
@@ -205,7 +202,7 @@ On crée une fonction qui prend en paramètre deux couples de coordonnées et qu
 
 On crée un JSON (en chaine de caractères) pour l'API de routage "routes" de TravelTime à partir de la documentation (playground disponible [ici](https://playground.traveltime.com/routes)) avec les caractéristiques suivantes :
 
--   Lieu de départ : Paris-St-Lazare (48.8766, 2.3251)
+-   Lieu de départ : Paris-Montparnasse (48.8406, 2.3198)
 
 -   Lieu d'arrivée : Toulouse-Matabiau (43.6107, 1.4544)
 
@@ -254,7 +251,7 @@ getRoutesApiJson <- function(lat1, lng1, lat2, lng2){
         "arrival_location_ids": [
           "point-to-1"
         ],
-        "departure_time": "2024-12-02T18:00:00.000Z",
+        "departure_time": "2024-08-04T09:00:00.000Z",
         "properties": [
           "travel_time",
           "route"
@@ -271,7 +268,7 @@ getRoutesApiJson <- function(lat1, lng1, lat2, lng2){
 }
 ```
 
-On crée une fonction qui prend en paramètre les noms de 2 villes et qui renvoie le temps de transport en heure entre ces 2 villes. On prendra soin de gérer le cas où aucun itinéraire n'est trouvé en renvoyant 'Inf'
+On crée une fonction qui prend en paramètre les noms de 2 gares et qui renvoie le temps de transport en heure entre ces 2 gares. On prendra soin de gérer le cas où aucun itinéraire n'est trouvé en renvoyant 'Inf'
 
 ```{r}
 getTravelTimeBetweenStations <- function(station1, station2, verbose = TRUE){
