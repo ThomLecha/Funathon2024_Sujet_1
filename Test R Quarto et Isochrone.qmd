@@ -156,41 +156,47 @@ coordinates
 
 ```
 
-On teste une autre library "tmaptools" qui permet d'obtenir les coordonnées
+Pour palier au problème de coordonnées induit par la méthode précédente on utilise une base de donnée externe avec les coordonnées géographiques des gares française qui se situe à l'adresse suivante : [TravelTime](https://www.data.gouv.fr/fr/datasets/liste-des-gares/)
 
 ```{r}
 # On installe et on importe le package "tmaptools"
-if (!requireNamespace("tmaptools")){install.packages("tmaptools")}
-library(tmaptools)
+if (!requireNamespace("dplyr")){install.packages("dplyr")}
+library(dplyr)
 
-CITY_NAME <- "Lille"
+# on charge les données et la gare d'exmple
+GARE_NAME <- "Lille-Flandres"
+gareData <- read.csv2("https://www.data.gouv.fr/fr/datasets/r/d22ba593-90a4-4725-977c-095d1f654d28")
 
-# On obtient les coordonnées de la ville
-coords <- geocode_OSM(CITY_NAME)
-print(coords)
+# on conserve les infos utiles
+gareData <- gareData %>% 
+  select(libelle, commune, x_wgs84, y_wgs84) %>% 
+  rename("lng" = x_wgs84, "lat"=y_wgs84)
 
-# On constate que la latitude et la longitude sont inversées, on les inverse
-coords <- rev(coords$coords)
-names(coords) <- c("lat", "lng")
+# on remarque un problème de type car les lat et lng sont en chr alors qu'elles devraient être en num
+
+
+# On obtient les coordonnées de la gare
+LilleData <- gareData %>% 
+  filter(libelle == GARE_NAME)
+coordsLilleFlandres <- c(LilleData$lat[1],LilleData$lng[1])
 
 ```
 
-On fait une fonction qui renvoie les coordonnées d'une ville à partir de ce nom
+On généralise le cas précédent à l'aide d'une fonction renvoyant les coordonnées de la gare d'une ville demandée
 
 ```{r}
-getCityCoordinates <- function(city, verbose = TRUE){
-  # On obtient les coordonnées de la ville
-  coordinates <-  geocode_OSM(city)
-  # On constate que la latitude et la longitude sont inversées, on les inverse
-  coordinates <- rev(coordinates$coords)
-  names(coordinates) <- c("lat", "lng")
+getStationCoordinates <- function(gare, verbose = TRUE){
+  data <- gareData %>% 
+    filter(libelle == gare)
+  
+  coordinates <- c(data$lat[1],data$lng[1])
   # Si verbose est TRUE, on affiche les coordonnées
   if (verbose){
-    cat(city, " -> (", coordinates[1],", ",coordinates[2], ")\n", sep = "")
+    cat(gare, " -> (", coordinates[1],", ",coordinates[2], ")\n", sep = "")
   }
   return(coordinates)
 }
-
+getCityCoordinates("Toulouse-Matabiau")
 ```
 
 ## 3.Obtention du temps de transport entre 2 villes
@@ -199,13 +205,13 @@ On crée une fonction qui prend en paramètre deux couples de coordonnées et qu
 
 On crée un JSON (en chaine de caractères) pour l'API de routage "routes" de TravelTime à partir de la documentation (playground disponible [ici](https://playground.traveltime.com/routes)) avec les caractéristiques suivantes :
 
--   Lieu de départ : Paris (48.8534, 2.3483)
+-   Lieu de départ : Paris-St-Lazare (48.8766, 2.3251)
 
--   Lieu d'arrivée : Toulouse (43.6044, 1.4442)
+-   Lieu d'arrivée : Toulouse-Matabiau (43.6107, 1.4544)
 
 -   Mode de transport : Transport public (bus, métro, tram, train)
 
--   Date et heure : 2024-03-17 à 18h00 UTC
+-   Date et heure : 2024-08-14 à 18h00 UTC
 
 -   Flexibilité : 12h00
 
@@ -248,7 +254,7 @@ getRoutesApiJson <- function(lat1, lng1, lat2, lng2){
         "arrival_location_ids": [
           "point-to-1"
         ],
-        "departure_time": "2024-03-17T18:00:00.000Z",
+        "departure_time": "2024-12-02T18:00:00.000Z",
         "properties": [
           "travel_time",
           "route"
@@ -268,10 +274,10 @@ getRoutesApiJson <- function(lat1, lng1, lat2, lng2){
 On crée une fonction qui prend en paramètre les noms de 2 villes et qui renvoie le temps de transport en heure entre ces 2 villes. On prendra soin de gérer le cas où aucun itinéraire n'est trouvé en renvoyant 'Inf'
 
 ```{r}
-getTravelTimeBetweenCities <- function(city1, city2, verbose = TRUE){
+getTravelTimeBetweenStations <- function(station1, station2, verbose = TRUE){
   # On récupère les coordonnées des villes
-  coordinates1 <- getCityCoordinates(city1, verbose = FALSE)
-  coordinates2 <- getCityCoordinates(city2, verbose = FALSE)
+  coordinates1 <- getStationCoordinates(station1, verbose = FALSE)
+  coordinates2 <- getStationCoordinates(station2, verbose = FALSE)
   
   # On récupère le JSON pour l'API de routage
   json <- getRoutesApiJson(coordinates1[1], coordinates1[2], coordinates2[1], coordinates2[2])
@@ -284,7 +290,7 @@ getTravelTimeBetweenCities <- function(city1, city2, verbose = TRUE){
   if (response[[2]] == 429){
     print("Trop de requêtes, on attend une minute...")
     Sys.sleep(60)
-    return(getTravelTimeBetweenCities(city1, city2, verbose))
+    return(getTravelTimeBetweenStations(city1, city2, verbose))
   }
   
   # Si aucun itinéraire n'a été trouvé
@@ -292,7 +298,7 @@ getTravelTimeBetweenCities <- function(city1, city2, verbose = TRUE){
       travelTime <- Inf
       # On affiche le temps de trajet si verbose est TRUE
       if (verbose){
-        cat(city1, " -> ", city2, " : ", travelTime, "\n")
+        cat(station1, " -> ", station2, " : ", travelTime, "\n")
       }
       return(travelTime)
   # Sinon
@@ -313,7 +319,7 @@ getTravelTimeBetweenCities <- function(city1, city2, verbose = TRUE){
     
     # On affiche le temps de trajet si verbose est TRUE
     if (verbose){
-      cat(city1, " -> ", city2, " : ", travelTime, "\n")
+      cat(station1, " -> ", station2, " : ", travelTime, "\n")
     }
     
     return(travelTime)
@@ -321,15 +327,15 @@ getTravelTimeBetweenCities <- function(city1, city2, verbose = TRUE){
 }
 
 # test lille
-jsonLilleParis <- getRoutesApiJson(50.63104, 3.046846,43.6044,1.4442)
-response2 <- getTraveltimeAPIResponse(ROUTES_API_URL, jsonLilleParis)
+jsonToulouseParis <- getRoutesApiJson(43.6107, 1.4544,48.8406,2.3198)
+response2 <- getTraveltimeAPIResponse(ROUTES_API_URL, jsonToulouseParis)
 content2 <- response2[[1]]
 ```
 
 On teste la fonction avec Toulouse et Paris
 
 ```{r}
-timeTravels <- getTravelTimeBetweenCities("Toulouse", "Paris")
+timeTravels <- getTravelTimeBetweenStations("Toulouse-Matabiau", "Paris-Montparnasse")
 timeTravels
 ```
 
