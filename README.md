@@ -14,6 +14,8 @@ Visualiser les émissions de C02 liées à une mesure de restriction de liaison 
 
 5.  Datavisualisation des données sur une carte avec le package leaflet
 
+6.  Test de la branche
+
 ## Remarques
 
 Pas d'utilisation des API "isochrone" et "time matrix" de TravelTime car limitées à 4h max tout inclus (trajet à pied du centre à la gare, etc.) donc utilisation de l'API "routes".
