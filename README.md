@@ -16,7 +16,11 @@ Visualiser les émissions de C02 liées à une mesure de restriction de liaison 
 
 6.  Test de la branche
 
+7.  Conflit ???
+
 ## Remarques
+
+8.  Conflit ???
 
 Pas d'utilisation des API "isochrone" et "time matrix" de TravelTime car limitées à 4h max tout inclus (trajet à pied du centre à la gare, etc.) donc utilisation de l'API "routes".
 
