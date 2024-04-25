@@ -14,7 +14,9 @@ Visualiser les émissions de C02 liées à une mesure de restriction de liaison 
 
 5.  Datavisualisation des données sur une carte avec le package leaflet
 
-6.  Test de la branche
+6.  Test de la branche 2
+
+7.  Test de la branche 2
 
 7.  Conflit ???
 
